@@ -1,10 +1,66 @@
 import Header from './Header';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { checkValidData } from '../utils/validate';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword , updateProfile } from "firebase/auth";
+import { auth } from '../utils/firebase';
+import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { addUser } from '../utils/userSlice';
 
 const Login = () => {
-    const [isSignIn,setIsSignIn] = useState(true);
-    const isSignInForm = ()=>{
+    const [isSignIn, setIsSignIn] = useState(true);
+    const [errorMessage, setErrorMessage] = useState(null);
+    const name = useRef(null);
+    const email = useRef(null);
+    const password = useRef(null);
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+
+    const isSignInForm = () => {
         setIsSignIn(!isSignIn);
+    }
+    const handleButtonClick = () => {
+        const message = checkValidData(email.current.value, password.current.value);
+        setErrorMessage(message);
+        if (message) return;
+
+        if (!isSignIn) {
+            createUserWithEmailAndPassword(auth, email.current.value, password.current.value)
+                .then((userCredential) => {
+                    // Signed up 
+                    const user = userCredential.user;
+                    updateProfile(user, {
+                        displayName: name.current.value,
+                    }).then(() => {
+                        const { uid, email, displayName } = auth.currentUser;
+                        dispatch(addUser({ userId: uid, email: email, displayName: displayName }));
+                        navigate("/browse");
+                    }).catch((error) => {
+                       console.log(error,'error')
+                    });
+
+                })
+                .catch((error) => {
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    setErrorMessage(errorCode + "-" + errorMessage)
+                    // ..
+                });
+        } else {
+            signInWithEmailAndPassword(auth, email.current.value, password.current.value)
+                .then((userCredential) => {
+                    // Signed in 
+                    const user = userCredential.user;
+                    navigate("/browse");
+                    // ...
+                })
+                .catch((error) => {
+                    const errorCode = error.code;
+                    const errorMessage = error.message;
+                    setErrorMessage(errorCode + "-" + errorMessage)
+                });
+        }
+
     }
     return (
         <div>
@@ -13,16 +69,17 @@ const Login = () => {
                 <img src="https://assets.nflxext.com/ffe/siteui/vlv3/9c363af5-4750-4f14-87d1-8125f5276db0/web/IN-en-20251027-TRIFECTA-perspective_b68b1528-3a10-4997-9f99-48ccbdb86626_small.jpg" alt="logo">
                 </img>
             </div>
-            <form className="w-3/12 absolute p-12 my-26 mx-auto right-0 left-0 text-white rounded-lg bg-black/70">
-            <h1 className="font-bold text-3xl py-4"> {isSignIn ? "Sign In" : 'Sign Up'} </h1>
+            <form onSubmit={(e) => e.preventDefault()} className="w-3/12 absolute p-12 my-26 mx-auto right-0 left-0 text-white rounded-lg bg-black/70">
+                <h1 className="font-bold text-3xl py-4"> {isSignIn ? "Sign In" : 'Sign Up'} </h1>
                 {
-                    !isSignIn &&(
-                        <input type="text" placeholder="Full Name" className="bg-gray-700 p-4 my-4 w-full" />
+                    !isSignIn && (
+                        <input type="text" ref={name} placeholder="Full Name" className="bg-gray-700 p-4 my-4 w-full" />
                     )
                 }
-                <input type="text" placeholder="Email Address" className="bg-gray-700 p-4 my-4 w-full" />
-                <input type="text" placeholder="Password" className="bg-gray-700 p-4 my-4 w-full" />
-                <button className="bg-red-700 p-4 my-6 w-full rounded-lg">{isSignIn ? "Sign In" : 'Sign Up'}</button>
+                <input ref={email} type="text" placeholder="Email Address" className="bg-gray-700 p-4 my-4 w-full" />
+                <input ref={password} type="password" placeholder="Password" className="bg-gray-700 p-4 my-4 w-full" />
+                <p className="text-red-500 text-lg text-bold">{errorMessage}</p>
+                <button className="bg-red-700 p-4 my-6 w-full rounded-lg" onClick={handleButtonClick}>{isSignIn ? "Sign In" : 'Sign Up'}</button>
                 <p className="py-4 cursor-pointer" onClick={isSignInForm}> {isSignIn ? "New to Netflix? Sign Up Now" : 'Already Registered? Sign In Now'}  </p>
             </form>
         </div>
