@@ -13,7 +13,6 @@ const Login = () => {
     const name = useRef(null);
     const email = useRef(null);
     const password = useRef(null);
-    const navigate = useNavigate();
     const dispatch = useDispatch();
 
     const isSignInForm = () => {
@@ -34,9 +33,8 @@ const Login = () => {
                     }).then(() => {
                         const { uid, email, displayName } = auth.currentUser;
                         dispatch(addUser({ userId: uid, email: email, displayName: displayName }));
-                        navigate("/browse");
                     }).catch((error) => {
-                       console.log(error,'error')
+                         setErrorMessage(error)
                     });
 
                 })
@@ -51,7 +49,6 @@ const Login = () => {
                 .then((userCredential) => {
                     // Signed in 
                     const user = userCredential.user;
-                    navigate("/browse");
                     // ...
                 })
                 .catch((error) => {
